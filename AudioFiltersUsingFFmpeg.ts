@@ -1,25 +1,18 @@
-import ffmpeg from "fluent-ffmpeg";
+import { exec } from "child_process";
 import fs from "fs";
-
-const pathLocalFiles = process.platform === "linux" ? "/home/oem/Documentos" : "D:/arquivosBot/temp"
+import { tempDirFile } from "./createTempFile";
+import { pathLocalFiles } from "./constants";
 
 const filter = "acrusher=level_in=4:level_out=8:bits=4:mode=log:aa=1";
-const media = fs.readFileSync(pathLocalFiles + "/audio.mp3", {
-    encoding: "base64",
+const media = fs.readFileSync(pathLocalFiles + "/temp/audio.mp3", { encoding: "base64" });
+const buffer = Buffer.from(media, "base64");
+const [fileInputPath, fileOutputPath] = [tempDirFile("mp3"), tempDirFile("mp3")];
+fs.writeFileSync(fileInputPath, buffer);
+
+exec(`ffmpeg -i "${fileInputPath}" -af "${filter}" -f mp3 "${fileOutputPath}"`, (error) => {
+    if (error) {
+        console.log(error);
+        return;
+    }
+    console.log("Audio modified successfully");
 });
-    const buffer = Buffer.from(media, "base64");
-    const filename = Date.now();
-    const fileInputPath = pathLocalFiles + `/${filename}.mp3`;
-    const fileOutputPath = pathLocalFiles + `/${filename}_modified.mp3`;
-    fs.writeFileSync(fileInputPath, buffer);
-    ffmpeg(fileInputPath)
-        .audioFilters(filter)
-        .format("mp3")
-        .save(fileOutputPath)
-        .on("end", () => {
-            console.log("Finished");
-            setTimeout(() => {
-                fs.unlinkSync(fileInputPath);
-                fs.unlinkSync(fileOutputPath);
-            }, 1000 * 15);
-        });
